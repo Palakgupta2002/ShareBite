@@ -1,0 +1,106 @@
+/* SignUp.css */
+
+/* Container that holds both form and image */
+.signup-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: calc(100vh - 100px);
+  padding: 20px;
+
+  gap: 20px;
+
+  
+}
+
+/* Left side: the card/form */
+.signup-form-wrapper {
+
+  padding: 2rem;
+  background-color: #ffffff;
+ 
+
+}
+
+.signup-form-wrapper h2 {
+  margin-bottom: 1.5rem;
+  font-size: 1.75rem;
+  color: #333333;
+}
+
+/* Style each form field container */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #555555;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  transition: border-color 0.2s ease-in-out;
+}
+
+.form-group input:focus {
+  border-color: #007BFF;
+  outline: none;
+}
+
+/* Error message styling */
+.error-message {
+  color: #e74c3c;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+/* Submit button */
+.signup-button {
+  background-color: #2a9d8f;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 0.65rem 1.25rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.signup-button:hover {
+  background-color: #2a9d8f;
+}
+
+/* Right side: image */
+.signup-image-wrapper {
+    margin-left: 20px;
+   height: 75%;
+   /* background-color: rgb(146, 172, 146); */
+   display: flex;
+   align-items: center;
+   border-radius: 5px;
+}
+
+.signup-image-wrapper img {
+  max-width: 400px;
+  border-radius: 8px;
+  height: 100%;
+}
+
+/* Responsive: stack on smaller screens */
+@media (max-width: 768px) {
+  .signup-container {
+    flex-direction: column;
+  }
+
+  .signup-image-wrapper {
+    height: 200px;
+  }
+}
