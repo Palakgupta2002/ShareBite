@@ -1,17 +1,34 @@
-FoodBridge – Connecting Surplus to Need
-FoodBridge is a community-powered platform that makes it easy to donate or request food in your neighborhood. Whether you’ve got extra meals or need a helping hand, FoodBridge lets you post, browse, and claim food donations or requests—quickly and with dignity.
+# 🥗 FoodBridge – Connecting Surplus to Need
 
-With real-time updates, map-based views, and a simple claim system, FoodBridge helps reduce food waste and feed those in need, one connection at a time. Everyone can make a difference—one meal, one neighbor, one act of kindness.
+**FoodBridge** is a community-powered platform that makes it easy to donate or request food in your neighborhood.  
+Whether you’ve got extra meals or need a helping hand, FoodBridge lets you post, browse, and claim food donations or requests — quickly and with dignity.
 
-Key Features:
+With real-time updates, map-based views, and a simple claim system, FoodBridge helps reduce food waste and feed those in need, one connection at a time.  
+Everyone can make a difference — one meal, one neighbor, one act of kindness.
 
-📍 Browse and post food donations or requests nearby
+---
 
-🔄 Real-time status tracking (Posted → Claimed → Picked Up)
+## 🚀 Key Features
 
-⏰ Expiry alerts and in-app notifications
+- 📍 **Nearby Listings**  
+  Browse and post food donations or requests in your area.
 
-🌟 Build trust with ratings and donation history
+- 🔄 **Real-Time Status Tracking**  
+  Track the lifecycle of posts: `Posted → Claimed → Picked Up`.
 
-🔐 Public browsing; secure login for claims and posts
+- ⏰ **Smart Notifications**  
+  Get expiry alerts and in-app reminders.
+
+- 🌟 **Reputation System**  
+  Build trust with user ratings and donation history.
+
+- 🔐 **Access Control**  
+  Public browsing allowed; secure login required to post or claim items.
+
+---
+
+## 💡 Why FoodBridge?
+
+Every year, tons of food go to waste while people go hungry.  
+**FoodBridge** empowers communities to connect directly — making food sharing simple, local, and impactful.
 
