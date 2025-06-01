@@ -8,6 +8,9 @@ import postRoutes from "./routes/postRoutes.js";
 import claimRoutes from "./routes/claimRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import postStatusRoutes from "./routes/postStatusRoutes.js";
+import ratingRoutes from "./routes/ratingRoutes.js";
+
+
 dotenv.config();
 
 
@@ -27,6 +30,7 @@ app.use("/uploads", express.static("uploads"));
 app.use("/api/claims", claimRoutes);
 app.use("/api/post-status", postStatusRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/ratings", ratingRoutes);
 
 // Register your postRoutes under /api/posts
 app.use("/api/posts", postRoutes);

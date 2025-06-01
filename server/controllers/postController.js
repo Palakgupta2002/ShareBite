@@ -2,7 +2,7 @@ import Post from "../modal/Post.js";
 import Claim from "../modal/Claim.js";
 import { sendNotification } from "../Utility/sendNotification.js";
 import User from "../modal/User.js";
-
+import Rating from "../modal/Rating.js";
 
 export const createPost = async (req, res) => {
   try {
@@ -62,7 +62,7 @@ export const createPost = async (req, res) => {
 export const getAllPosts = async (req, res) => {
   try {
     const posts = await Post.find()
-      .populate("user", "name email") // Include post owner's details
+      .populate("user", "name email")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -72,16 +72,28 @@ export const getAllPosts = async (req, res) => {
       post: { $in: postIds },
       claimStatus: "Approved",
     })
-      .populate("claimer", "name email") // Include claimer details
+      .populate("claimer", "name email")
+      .lean();
+
+    const ratings = await Rating.find({
+      post: { $in: postIds },
+    })
+      .populate("rater", "name email")
       .lean();
 
     const postsWithApprovedClaim = posts.map((post) => {
       const approvedClaim = claims.find(
         (claim) => claim.post.toString() === post._id.toString()
       );
+
+      const postRatings = ratings.filter(
+        (rating) => rating.post.toString() === post._id.toString()
+      );
+
       return {
         ...post,
         approvedClaim: approvedClaim || null,
+        ratings: postRatings || [],
       };
     });
 
@@ -144,3 +156,42 @@ export const deletePost = async (req, res) => {
     res.status(500).json({ message: "Failed to delete post." });
   }
 };
+
+export const getUserPostsWithDetails = async (req, res) => {
+  const { userId } = req?.query;
+
+  try {
+    // Get all posts by this user
+    const posts = await Post.find({ user: userId })
+      .populate("user", "name email")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const postIds = posts.map((post) => post._id);
+
+    // Get all ratings (including comments) for those posts
+    const ratings = await Rating.find({ post: { $in: postIds } })
+      .populate("rater", "name email")
+      .lean();
+
+    const enrichedPosts = posts.map((post) => {
+      const postRatings = ratings.filter(
+        (rating) => rating.post.toString() === post._id.toString()
+      );
+
+      const comments = postRatings.filter((rating) => rating.comment);
+
+      return {
+        ...post,
+        ratings: postRatings,
+        comments,
+      };
+    });
+
+    res.status(200).json(enrichedPosts);
+  } catch (error) {
+    console.error("Error fetching user posts with ratings/comments:", error);
+    res.status(500).json({ message: "Failed to fetch user posts." });
+  }
+};
+

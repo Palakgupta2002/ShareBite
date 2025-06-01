@@ -4,7 +4,8 @@ import {
   getAllPosts,
   getPostsByUser,
   updatePost,
-  deletePost
+  deletePost,
+  getUserPostsWithDetails
 } from "../controllers/postController.js";
 
 
@@ -15,5 +16,6 @@ router.get("/", getAllPosts);
 router.get("/user/:userId", getPostsByUser);
 router.put("/:id", updatePost);
 router.delete("/:id", deletePost);
+router.get("/profileDetails",getUserPostsWithDetails)
 
 export default router;
