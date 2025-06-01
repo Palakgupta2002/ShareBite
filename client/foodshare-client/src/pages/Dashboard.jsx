@@ -1,49 +1,31 @@
 import React, { useEffect, useState } from "react";
-import "../style/dashboard.css"; // make sure this path matches your project structure
+import "../style/dashboard.css"; 
+import defaultPic from "../assest/defaultPic.png"
 import axios from "axios";
 
-// Dummy data for demonstration
-const samplePosts = [
-  {
-    id: 1,
-    type: "Donate",
-    description: "5 leftover lasagna portions",
-    quantity: "5 servings",
-    location: "123 Maple St.",
-    expiryDate: "2025-06-05",
-    status: "Posted",
-  },
-  {
-    id: 2,
-    type: "Request",
-    description: "Need bread and milk for family of 3",
-    quantity: "1 loaf, 2 liters",
-    location: "456 Oak Ave.",
-    expiryDate: "2025-06-02",
-    status: "Claimed",
-  },
-  {
-    id: 3,
-    type: "Donate",
-    description: "10 sandwich packs from café",
-    quantity: "10 packs",
-    location: "789 Pine Rd.",
-    expiryDate: "2025-06-01",
-    status: "PickedUp",
-  },
-];
 
 function App() {
   const [posts, setPosts] = useState([]);
   const [filterType, setFilterType] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [createPost, setCreatePost] = useState(false);
-  const [viewClaims,setViewClaims]=useState(false)
-    const userId = localStorage.getItem("userId") || ""; // Get user ID from localStorage
+  const [viewClaims, setViewClaims] = useState(false);
+  const userId = localStorage.getItem("userId") || "";
+  const [showModal, setShowModal] = useState(false);
+  const [selectedPostId, setSelectedPostId] = useState(null);
+  const [deliveryLocationText, setDeliveryLocationText] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+  const [showModalNoti, setShowModalNoti] = useState(false);
+
+  const openClaimsModal = (postId) => {
+    setSelectedPostId(postId);
+    setModalOpen(true);
+  };
 
   // Form state
   const [formData, setFormData] = useState({
-    user: userId, 
+    user: userId,
     type: "Donate",
     description: "",
     quantity: "",
@@ -77,14 +59,13 @@ function App() {
       }
 
       const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}posts`,
+        `${process.env.REACT_APP_API_URL}/posts`,
         formDataToSend,
         {
           headers: { "Content-Type": "application/json" },
         }
       );
 
-      
       setCreatePost(false);
       setFormData({
         type: "Donate",
@@ -94,6 +75,7 @@ function App() {
         expiryDate: "",
         image: null,
       });
+      fetchAllPosts();
     } catch (error) {
       console.error("Error creating post:", error);
     }
@@ -102,9 +84,9 @@ function App() {
   const fetchAllPosts = async () => {
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_API_URL}/posts`
+        `${process.env.REACT_APP_API_URL}/posts?userId=${userId}`
       );
-      setPosts(response.data); // This assumes response.data is the array of posts
+      setPosts(response.data);
       console.log("All Posts:", response.data);
     } catch (error) {
       console.error("Error fetching posts:", error);
@@ -115,40 +97,79 @@ function App() {
     fetchAllPosts();
   }, []);
 
-  
-
   // Filter logic
   const filteredPosts = posts.filter((p) => {
     const matchesType = filterType === "" || p.type === filterType;
     const matchesSearch =
       searchTerm === "" ||
-      p.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.location.toLowerCase().includes(searchTerm.toLowerCase());
+      p?.description?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+      p?.location?.toLowerCase().includes(searchTerm?.toLowerCase());
     return matchesType && matchesSearch;
   });
 
-  const claimPost = async (postId) => {
-  try {
-    const response = await axios.post(`${process.env.REACT_APP_API_URL}/claims`, {
-      postId,
-      claimerId:userId , 
-    });
-    console.log("Claim successful:", response.data);
-  } catch (error) {
-    console.error("Error claiming post:", error);
-  }
-};
-
-const viewClaimsForPost = async (postId) => {
+  const claimPost = async (postId, deliveryLocationText) => {
     try {
-        const response = await axios.get(`${process.env.REACT_APP_API_URL}/claims/${postId}`);
-        console.log("Claims for post:", response.data);
-        setViewClaims(response.data); // Assuming you want to display these claims in a modal or section
-        console.log("Claims for post:", response.data);
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/claims`,
+        {
+          postId,
+          claimerId: userId,
+          deliveryLocationText,
+        }
+      );
+      console.log("Claim successful:", response.data);
     } catch (error) {
-        console.error("Error fetching claims for post:", error);
+      console.error("Error claiming post:", error);
     }
-}
+  };
+
+  const viewClaimsForPost = async (postId) => {
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL}/claims/${postId}`
+      );
+      console.log("Claims for post:", response.data);
+      setViewClaims(response.data); // Assuming you want to display these claims in a modal or section
+      console.log("Claims for post:", response.data);
+    } catch (error) {
+      console.error("Error fetching claims for post:", error);
+    }
+  };
+
+  const markPickUpStatus = async (postId) => {
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL}/post-status/mark-picked-up/${postId}/${userId}`
+      );
+      console.log("Post marked as picked up:", response.data);
+      fetchAllPosts();
+    } catch (error) {
+      console.error("Error marking post as picked up:", error);
+    }
+  };
+  const markAsCompleted = async (postId) => {
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL}/post-status/mark-completed/${postId}/${userId}`
+      );
+      console.log("Post marked as picked up:", response.data);
+      fetchAllPosts();
+    } catch (error) {
+      console.error("Error marking post as picked up:", error);
+    }
+  };
+
+   const getNotifications = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL}/notifications?userId=${userId}`
+      );
+      setNotifications(response.data);
+      setShowModalNoti(true);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
+  };
 
 
   return (
@@ -168,9 +189,11 @@ const viewClaimsForPost = async (postId) => {
             <li onClick={() => setCreatePost(true)}>
               <a href="#map">Create Post</a>
             </li>
+            <li onClick={()=>getNotifications()}>Notification</li>
             <li>
               <a href="#my-account">My Account</a>
             </li>
+            <li>{localStorage.getItem("userName")}</li>
           </ul>
         </nav>
       </header>
@@ -210,9 +233,10 @@ const viewClaimsForPost = async (postId) => {
           {/* 3. POST LIST */}
           <section className="post-list">
             {filteredPosts.map((post) => (
-              <div key={post._id} className="post-card">
+              <div key={post._id} className="post-card1">
                 {/* HEADER */}
-                <div className="post-card__header">
+               
+                <div className="post-card1__header">
                   <h3>
                     {post.type} • {post.locationText}
                   </h3>
@@ -222,9 +246,30 @@ const viewClaimsForPost = async (postId) => {
                     {post.status}
                   </span>
                 </div>
+                 <div className="post-card1__user-info">
+                  <img
+                    src={defaultPic} // Default image if no profile image is provided
+                    alt={`${post?.user?.name}'s profile`}
+                    className="user-profile-image"
+                  />
+                  <div className="user-details">
+                    <p className="user-name">
+                      <strong>Name:</strong> {post?.user?.name || "Anonymous"}
+                    </p>
+                    <p className="user-email">
+                      <strong>Email:</strong>{" "}
+                      <a
+                        href={`mailto:${post?.user?.email}`}
+                        className="user-email-link"
+                      >
+                        {post?.user?.email || "Not Provided"}
+                      </a>
+                    </p>
+                  </div>
+                </div>
 
                 {/* BODY */}
-                <div className="post-card__body">
+                <div className="post-card1__body">
                   <p className="description">{post.description}</p>
                   <p>
                     <strong>Quantity:</strong> {post.quantity}
@@ -236,18 +281,53 @@ const viewClaimsForPost = async (postId) => {
                 </div>
 
                 {/* FOOTER ACTIONS */}
-                <div className="post-card__footer">
-                  {post.status === "Posted" && (
-                   post.user!==userId ? <button onClick={() => claimPost(post._id)} className="btn btn-claim">Claim</button>:<button onClick={()=>viewClaimsForPost(post._id)} className="btn btn-claimed">Claims req</button>
-                  )}
+                <div className="post-card1__footer">
+                  {post.status === "Posted" &&
+                    (post.user._id !== userId ? (
+                      <button
+                        onClick={() => {
+                          setSelectedPostId(post._id);
+                          setShowModal(true);
+                        }}
+                        className="btn btn-claim"
+                      >
+                        Claim
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => openClaimsModal(post._id)}
+                        className="btn btn-claimed"
+                      >
+                        Claims req
+                      </button>
+                    ))}
                   {post.status === "Claimed" && (
-                    <button className="btn btn-picked">Mark Picked Up</button>
+                    <button
+                      onClick={() => markPickUpStatus(post._id)}
+                      className="btn btn-picked"
+                    >
+                      Mark Picked Up
+                    </button>
                   )}
-                  {post.status === "PickedUp" && (
+                  {post.status === "Picked Up" && userId === post.user._id && (
                     <span className="status-complete">
                       Waiting for Confirmation...
                     </span>
                   )}
+                  {post.status === "Picked Up" &&
+                    userId !== post.user._id &&
+                    userId !== post?.approvedClaim?.claimer._id && (
+                      <span className="status-complete">Booked</span>
+                    )}
+                  {post.status === "Picked Up" &&
+                    userId === post?.approvedClaim?.claimer._id && (
+                      <span
+                        onClick={() => markAsCompleted(post._id)}
+                        className="status-complete"
+                      >
+                        Mark as received
+                      </span>
+                    )}
                   {post.status === "Completed" && (
                     <span className="status-complete">Completed ✅</span>
                   )}
@@ -263,13 +343,9 @@ const viewClaimsForPost = async (postId) => {
           </section>
         </div>
 
-        {/* Right column: Map */}
-        {/* <section className="map-container" id="map"> */}
-        {/* In a real implementation, you'd integrate Leaflet/Google Maps here and plot markers. */}
-        {/* </section> */}
         {createPost && (
           <div className="modal">
-            <div className="modal-content">
+            <div style={{ width: "60%" }} className="modal-content">
               <div className="modal-header">
                 <h2>Create a Post</h2>
                 <button
@@ -368,9 +444,158 @@ const viewClaimsForPost = async (postId) => {
             </div>
           </div>
         )}
+
+        {showModal && (
+          <div className="modal-overlay">
+            <div className="modal">
+              <div className="claim-modal-content">
+                <h3>Enter Delivery Location</h3>
+                <input
+                  type="text"
+                  value={deliveryLocationText}
+                  onChange={(e) => setDeliveryLocationText(e.target.value)}
+                  placeholder="e.g., Flat 204, Green Tower"
+                />
+                <button
+                  onClick={() => {
+                    claimPost(selectedPostId, deliveryLocationText);
+                    setShowModal(false);
+                    setDeliveryLocationText("");
+                  }}
+                >
+                  Submit Claim
+                </button>
+                <button onClick={() => setShowModal(false)}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <ClaimsModal
+          postId={selectedPostId}
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+        />
+         {showModalNoti && (
+        <NotificationModal
+          notifications={notifications}
+          onClose={() => setShowModal(false)}
+        />
+      )}
       </main>
     </div>
   );
 }
 
 export default App;
+
+const ClaimsModal = ({ postId, isOpen, onClose }) => {
+  const [viewClaims, setViewClaims] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  React.useEffect(() => {
+    if (isOpen && postId) {
+      fetchClaims();
+    }
+  }, [isOpen, postId]);
+
+  const fetchClaims = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL}/claims/${postId}`
+      );
+      setViewClaims(response.data);
+    } catch (err) {
+      setError("Failed to fetch claims.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const approveClaimHandler = async (claimId) => {
+    try {
+      await axios.patch(
+        `${process.env.REACT_APP_API_URL}/claims/${claimId}/approve`
+      );
+      fetchClaims(); // Refresh list after approval
+    } catch (err) {
+      alert("Failed to approve claim");
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <button className="modal-close" onClick={onClose}>
+          &times;
+        </button>
+        <h2>Claims for Post</h2>
+
+        {loading && <p>Loading...</p>}
+        {error && <p className="error">{error}</p>}
+        {!loading && !error && viewClaims.length === 0 && (
+          <p>No claims found.</p>
+        )}
+
+        <div className="claims-list">
+          {viewClaims.map((claim) => (
+            <div key={claim._id} className="claim-card">
+              <p>
+                <strong>Name:</strong> {claim.claimer?.name}
+              </p>
+              <p>
+                <strong>Email:</strong> {claim.claimer?.email}
+              </p>
+              <p>
+                <strong>Delivery Location:</strong> {claim.deliveryLocationText}
+              </p>
+              <p>
+                <strong>Status:</strong> {claim.claimStatus}
+              </p>
+              {claim.claimStatus === "Pending" && (
+                <button
+                  className="btn btn-approve"
+                  onClick={() => approveClaimHandler(claim._id)}
+                >
+                  Approve
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+
+const NotificationModal = ({ notifications, onClose }) => {
+  return (
+    <div className="noti-backdrop" onClick={onClose}>
+      <div className="noti-modal" onClick={(e) => e.stopPropagation()}>
+        <h2>Notifications</h2>
+        <ul className="noti-list">
+          {notifications.length === 0 ? (
+            <li className="noti-empty">No notifications yet.</li>
+          ) : (
+            notifications.map((n) => (
+              <li key={n._id} className="noti-item">
+                {n.message}
+              </li>
+            ))
+          )}
+        </ul>
+        <button className="noti-close" onClick={onClose}>Close</button>
+      </div>
+    </div>
+  );
+};
+
+
+
