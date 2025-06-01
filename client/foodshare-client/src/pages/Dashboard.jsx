@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import "../style/dashboard.css";
 import defaultPic from "../assest/defaultPic.png";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import { Toaster, toast } from 'react-hot-toast';
 
 function App() {
   const [posts, setPosts] = useState([]);
@@ -23,6 +25,9 @@ function App() {
     raterId: null,
     rateeId: null,
   });
+  const [fetchedUserPosts, setFetchedUserPosts] = useState([]);
+  const [showprofilemodal, setShowprofileModal] = useState(false);
+  const navigate = useNavigate();
 
   // Function to trigger modal
   const shareReview = (postId, rater, ratee) => {
@@ -77,6 +82,7 @@ function App() {
           headers: { "Content-Type": "application/json" },
         }
       );
+      toast.success("Post created successfully!");
 
       setCreatePost(false);
       setFormData({
@@ -90,6 +96,7 @@ function App() {
       fetchAllPosts();
     } catch (error) {
       console.error("Error creating post:", error);
+      toast.error("Failed to create post.");
     }
   };
 
@@ -99,6 +106,7 @@ function App() {
         `${process.env.REACT_APP_API_URL}/posts?userId=${userId}`
       );
       setPosts(response.data);
+   
       console.log("All Posts:", response.data);
     } catch (error) {
       console.error("Error fetching posts:", error);
@@ -129,9 +137,12 @@ function App() {
           deliveryLocationText,
         }
       );
+      fetchAllPosts();
       console.log("Claim successful:", response.data);
+      toast.success("Post claimed successfully!");
     } catch (error) {
       console.error("Error claiming post:", error);
+      toast.error("You are already claimed for this post.");
     }
   };
 
@@ -141,7 +152,7 @@ function App() {
         `${process.env.REACT_APP_API_URL}/claims/${postId}`
       );
       console.log("Claims for post:", response.data);
-      setViewClaims(response.data); // Assuming you want to display these claims in a modal or section
+      setViewClaims(response.data); 
       console.log("Claims for post:", response.data);
     } catch (error) {
       console.error("Error fetching claims for post:", error);
@@ -155,6 +166,7 @@ function App() {
       );
       console.log("Post marked as picked up:", response.data);
       fetchAllPosts();
+      toast.success("Post marked as picked up successfully!");
     } catch (error) {
       console.error("Error marking post as picked up:", error);
     }
@@ -166,6 +178,7 @@ function App() {
       );
       console.log("Post marked as picked up:", response.data);
       fetchAllPosts();
+      toast.success("Post marked as completed successfully!");
     } catch (error) {
       console.error("Error marking post as picked up:", error);
     }
@@ -178,29 +191,35 @@ function App() {
       );
       setNotifications(response.data);
       setShowModalNoti(true);
+
     } catch (error) {
       console.error("Error fetching notifications:", error);
     }
   };
 
-  const getprofileDetails=async()=>{
+  const showprofileDetails = async () => {
     try {
       const response = await axios.get(
         `${process.env.REACT_APP_API_URL}/posts/profileDetails?userId=${userId}`
       );
-     console.log("Profile Details:", response.data);
+      console.log("Profile Details:", response.data);
+      setShowprofileModal(true);
+      setFetchedUserPosts(response.data);
+      fetchAllPosts();
     } catch (error) {
       console.error("Error fetching notifications:", error);
     }
+  };
 
-  }
-  useEffect(()=>{
-    getprofileDetails();
-  },[])
+  const logout = () => {
+    localStorage.clear(); // Remove all stored items
+    navigate("/login"); // Redirect to login page
+  };
 
   return (
     <div className="app-container">
       {/* --- HEADER --- */}
+      <Toaster />
       <header className="header">
         <div className="header__logo">FoodBridge</div>
         <nav className="header__nav">
@@ -215,7 +234,13 @@ function App() {
             <li onClick={() => getNotifications()}>
               <a href="#map">Notification</a>
             </li>
-            <li>{localStorage.getItem("userName")}</li>
+            <li onClick={logout}>
+              <a href="#logout">LogOut</a>
+            </li>
+
+            <li onClick={() => showprofileDetails()}>
+              <a href="#profile"> {localStorage.getItem("userName")}</a>
+            </li>
           </ul>
         </nav>
       </header>
@@ -312,15 +337,21 @@ function App() {
                 <div className="post-card1__footer">
                   {post.status === "Posted" &&
                     (post.user._id !== userId ? (
-                      <button
-                        onClick={() => {
-                          setSelectedPostId(post._id);
-                          setShowModal(true);
-                        }}
-                        className="btn btn-claim"
-                      >
-                        Claim
-                      </button>
+                      post.claimIds.includes(
+                        (claim) => claim === userId
+                      ) ? (
+                        <span className="claimed-text">Claimed</span>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setSelectedPostId(post._id);
+                            setShowModal(true);
+                          }}
+                          className="btn btn-claim"
+                        >
+                          Claim
+                        </button>
+                      )
                     ) : (
                       <button
                         onClick={() => openClaimsModal(post._id)}
@@ -329,30 +360,32 @@ function App() {
                         Claims req
                       </button>
                     ))}
-                  {post.status === "Claimed" && (
+                  {post.status === "Claimed" && post.user._id===userId ? (
                     <button
                       onClick={() => markPickUpStatus(post._id)}
                       className="btn btn-picked"
                     >
                       Mark Picked Up
-                    </button>
-                  )}
+                    </button>)
+                    :
+                    <></>
+                  }
                   {post.status === "Picked Up" && userId === post.user._id && (
-                    <span className="status-complete">
+                    <span className="btn btn-picked">
                       Waiting for Confirmation...
                     </span>
                   )}
                   {post.status === "Picked Up" &&
                     userId !== post.user._id &&
                     userId !== post?.approvedClaim?.claimer._id && (
-                      <span className="status-complete">Booked</span>
+                      <span className="btn btn-picked">Booked</span>
                     )}
                   {post.status === "Picked Up" &&
                     userId === post?.approvedClaim?.claimer._id && (
                       <div>
                         <span
                           onClick={() => markAsCompleted(post._id)}
-                          className="status-complete"
+                          className="btn btn-picked"
                         >
                           Mark as received
                         </span>
@@ -360,10 +393,12 @@ function App() {
                     )}
                   {post.status === "Completed" && (
                     <div>
-                      <span className="status-complete">Completed ✅</span>
+                      <span className="btn btn-picked">Completed ✅</span>
                       {userId === post?.approvedClaim?.claimer._id &&
                       post.ratings.length == 0 ? (
                         <span
+                        className="btn btn-picked"
+                        style={{ cursor: "pointer" }}
                           onClick={() =>
                             shareReview(
                               post._id,
@@ -375,7 +410,7 @@ function App() {
                           Share your review
                         </span>
                       ) : (
-                        <span className="status-complete">
+                        <span className="btn btn-picked">
                           Review shared already
                         </span>
                       )}
@@ -532,6 +567,11 @@ function App() {
             rateeId={ratingData.rateeId}
           />
         )}
+        <ProfileDetailsModal
+          open={showprofilemodal}
+          onClose={() => setShowprofileModal(false)}
+          userData={fetchedUserPosts}
+        />
       </main>
     </div>
   );
@@ -558,8 +598,9 @@ const ClaimsModal = ({ postId, isOpen, onClose }) => {
         `${process.env.REACT_APP_API_URL}/claims/${postId}`
       );
       setViewClaims(response.data);
+      
     } catch (err) {
-      setError("Failed to fetch claims.");
+      toast.error("You are already claimed for this post.");
     } finally {
       setLoading(false);
     }
@@ -571,8 +612,10 @@ const ClaimsModal = ({ postId, isOpen, onClose }) => {
         `${process.env.REACT_APP_API_URL}/claims/${claimId}/approve`
       );
       fetchClaims(); // Refresh list after approval
+      toast.success("Claim approved successfully!");
     } catch (err) {
-      alert("Failed to approve claim");
+      // alert("Failed to approve claim");
+      toast.error("Failed to approve claim");
     }
   };
 
@@ -670,9 +713,9 @@ const RateModal = ({ isOpen, onClose, raterId, rateeId, postId }) => {
         }
       );
 
-      const data = await res.json();
+      // const data = await res.json();
       if (res.ok) {
-        alert("Rating submitted!");
+       toast.success("Rating submitted successfully!");
         onClose();
       } else {
         // alert(data.message || "Rating failed.");
@@ -680,7 +723,7 @@ const RateModal = ({ isOpen, onClose, raterId, rateeId, postId }) => {
       }
     } catch (error) {
       console.error("Error submitting rating:", error);
-      alert("Server error.");
+      toast.error("Failed to submit rating.");
     }
   };
 
@@ -729,3 +772,83 @@ const RateModal = ({ isOpen, onClose, raterId, rateeId, postId }) => {
     </div>
   );
 };
+
+function ProfileDetailsModal({ open, onClose, userData }) {
+  if (!open || !userData || userData.length === 0) return null;
+
+  const user = userData[0].user;
+
+  return (
+    <>
+      <div className="modal" onClick={onClose}>
+        <div
+          style={{ width: "60%" }}
+          className="modal-content"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h2>Profile: {user.name}</h2>
+          <p style={{ color: "#555", marginBottom: "20px" }}>{user.email}</p>
+
+          {userData.map((post) => (
+            <div
+              key={post._id}
+              style={{
+                marginBottom: "20px",
+                borderBottom: "1px solid #ddd",
+                paddingBottom: "10px",
+              }}
+            >
+              <h4>{post.type} Post</h4>
+              <p style={{ whiteSpace: "pre-line" }}>{post.description}</p>
+              <p style={{ fontSize: "0.9em", color: "#666" }}>
+                Quantity: {post.quantity} | Status: {post.status}
+              </p>
+
+              {/* Ratings & Comments */}
+              {post.ratings.length > 0 ? (
+                <>
+                  <h5 style={{ marginTop: "10px" }}>Ratings & Comments:</h5>
+                  {post.ratings.map((rating, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        background: "#f9f9f9",
+                        padding: "8px",
+                        margin: "5px 0",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      <strong>{rating.rater?.name}:</strong> {rating.rating}/5
+                      {rating.comment && (
+                        <p style={{ margin: "5px 0", fontStyle: "italic" }}>
+                          “{rating.comment}”
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <p style={{ fontSize: "0.9em", color: "#aaa" }}>
+                  No ratings or comments yet.
+                </p>
+              )}
+            </div>
+          ))}
+
+          <button
+            onClick={onClose}
+            style={{
+              marginTop: "10px",
+              padding: "8px 12px",
+              background: "#eee",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+            }}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
