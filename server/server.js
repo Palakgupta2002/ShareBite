@@ -6,6 +6,8 @@ import cors from "cors"
 import authRoutes from "./routes/authRoutes.js";
 import postRoutes from "./routes/postRoutes.js";
 import claimRoutes from "./routes/claimRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import postStatusRoutes from "./routes/postStatusRoutes.js";
 dotenv.config();
 
 
@@ -23,6 +25,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/auth", authRoutes);
 app.use("/uploads", express.static("uploads"));
 app.use("/api/claims", claimRoutes);
+app.use("/api/post-status", postStatusRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Register your postRoutes under /api/posts
 app.use("/api/posts", postRoutes);

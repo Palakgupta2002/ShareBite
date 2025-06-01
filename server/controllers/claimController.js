@@ -1,5 +1,7 @@
 import Claim from "../modal/Claim.js";
 import Post from "../modal/Post.js";
+import { sendNotification } from "../Utility/sendNotification.js";
+import User from "../modal/User.js";
 
 export const claimPost = async (req, res) => {
   try {
@@ -29,6 +31,11 @@ export const claimPost = async (req, res) => {
     });
 
     const savedClaim = await claim.save();
+        await sendNotification({
+      recipient: post.user._id,
+      message: `Your post "${post.description.slice(0, 40)}..." was claimed.`,
+      link: `/claims/${savedClaim._id}`
+    })
     res.status(201).json({ message: "Post claimed successfully", claim: savedClaim });
   } catch (error) {
     console.error("Error claiming post:", error);
@@ -41,7 +48,7 @@ export const viewClaimsForPost = async (req, res) => {
   try {
     const { postId } = req.params;
 
-    const claims = await Claim.find({ post: postId }).populate("claimer", "name email","deliveryLocationText");
+    const claims = await Claim.find({ post: postId }).populate("claimer", "name email");
     res.status(200).json(claims);
   } catch (error) {
     console.error("Error fetching claims:", error);
@@ -72,6 +79,30 @@ export const approveClaim = async (req, res) => {
 
     // Update the post's status to Claimed
     await Post.findByIdAndUpdate(approvedClaim.post, { status: "Claimed" });
+        // ✅ Notify approved claimer
+    await sendNotification({
+      recipient: approvedClaim.claimer._id,
+      message: `Your claim for "${post.description.slice(0, 40)}..." has been approved!`,
+      link: `/posts/${post._id}`
+    });
+
+    // ✅ Notify rejected claimers
+    const rejectedClaims = await Claim.find({
+      post: approvedClaim.post,
+      _id: { $ne: claimId }
+    });
+    await Claim.updateMany(
+      { post: approvedClaim.post, _id: { $ne: claimId } },
+      { claimStatus: "Rejected" }
+    );
+
+    for (const claim of rejectedClaims) {
+      await sendNotification({
+        recipient: claim.claimer,
+        message: `Your claim for "${post.description.slice(0, 40)}..." was rejected.`,
+        link: `/posts/${post._id}`
+      });
+    }
 
     res.status(200).json({ message: "Claim approved", claim: approvedClaim });
   } catch (error) {
@@ -93,6 +124,15 @@ export const markPickedUp = async (req, res) => {
     }
 
     // Update post status to Picked Up
+     const approvedClaim = await Claim.findOne({ post: postId, claimStatus: "Approved" });
+
+    if (approvedClaim) {
+      await sendNotification({
+        recipient: approvedClaim.claimer,
+        message: `The item you claimed has been marked as picked up.`,
+        link: `/posts/${postId}`
+      });
+    }
     post.status = "Picked Up";
     await post.save();
 
