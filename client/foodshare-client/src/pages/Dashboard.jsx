@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
-import "../style/dashboard.css"; 
-import defaultPic from "../assest/defaultPic.png"
+import "../style/dashboard.css";
+import defaultPic from "../assest/defaultPic.png";
 import axios from "axios";
-
 
 function App() {
   const [posts, setPosts] = useState([]);
@@ -15,8 +14,21 @@ function App() {
   const [selectedPostId, setSelectedPostId] = useState(null);
   const [deliveryLocationText, setDeliveryLocationText] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-    const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [showModalNoti, setShowModalNoti] = useState(false);
+  // Add these states
+  const [showModalRate, setShowModalRate] = useState(false);
+  const [ratingData, setRatingData] = useState({
+    postId: null,
+    raterId: null,
+    rateeId: null,
+  });
+
+  // Function to trigger modal
+  const shareReview = (postId, rater, ratee) => {
+    setRatingData({ postId, raterId: rater, rateeId: ratee });
+    setShowModalRate(true);
+  };
 
   const openClaimsModal = (postId) => {
     setSelectedPostId(postId);
@@ -159,7 +171,7 @@ function App() {
     }
   };
 
-   const getNotifications = async () => {
+  const getNotifications = async () => {
     try {
       const response = await axios.get(
         `${process.env.REACT_APP_API_URL}/notifications?userId=${userId}`
@@ -171,6 +183,20 @@ function App() {
     }
   };
 
+  const getprofileDetails=async()=>{
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL}/posts/profileDetails?userId=${userId}`
+      );
+     console.log("Profile Details:", response.data);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
+
+  }
+  useEffect(()=>{
+    getprofileDetails();
+  },[])
 
   return (
     <div className="app-container">
@@ -182,16 +208,12 @@ function App() {
             <li>
               <a href="/">Home</a>
             </li>
-            <li>
-              <a href="#browse">Browse Posts</a>
-            </li>
             {/* <li><a href="#map">Map View</a></li> */}
             <li onClick={() => setCreatePost(true)}>
               <a href="#map">Create Post</a>
             </li>
-            <li onClick={()=>getNotifications()}>Notification</li>
-            <li>
-              <a href="#my-account">My Account</a>
+            <li onClick={() => getNotifications()}>
+              <a href="#map">Notification</a>
             </li>
             <li>{localStorage.getItem("userName")}</li>
           </ul>
@@ -235,18 +257,24 @@ function App() {
             {filteredPosts.map((post) => (
               <div key={post._id} className="post-card1">
                 {/* HEADER */}
-               
+
                 <div className="post-card1__header">
                   <h3>
                     {post.type} • {post.locationText}
                   </h3>
-                  <span
-                    className={`status-badge status-${post.status.toLowerCase()}`}
-                  >
-                    {post.status}
-                  </span>
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <span
+                      className={`status-badge status-${post.status.toLowerCase()}`}
+                    >
+                      {post.status}
+                    </span>
+                    <span>
+                      {"★".repeat(post.ratings[0]?.rating || 0)} (
+                      {post.ratings[0]?.rating || "No rating"})
+                    </span>
+                  </div>
                 </div>
-                 <div className="post-card1__user-info">
+                <div className="post-card1__user-info">
                   <img
                     src={defaultPic} // Default image if no profile image is provided
                     alt={`${post?.user?.name}'s profile`}
@@ -321,15 +349,37 @@ function App() {
                     )}
                   {post.status === "Picked Up" &&
                     userId === post?.approvedClaim?.claimer._id && (
-                      <span
-                        onClick={() => markAsCompleted(post._id)}
-                        className="status-complete"
-                      >
-                        Mark as received
-                      </span>
+                      <div>
+                        <span
+                          onClick={() => markAsCompleted(post._id)}
+                          className="status-complete"
+                        >
+                          Mark as received
+                        </span>
+                      </div>
                     )}
                   {post.status === "Completed" && (
-                    <span className="status-complete">Completed ✅</span>
+                    <div>
+                      <span className="status-complete">Completed ✅</span>
+                      {userId === post?.approvedClaim?.claimer._id &&
+                      post.ratings.length == 0 ? (
+                        <span
+                          onClick={() =>
+                            shareReview(
+                              post._id,
+                              post?.approvedClaim?.claimer._id,
+                              post.user._id
+                            )
+                          }
+                        >
+                          Share your review
+                        </span>
+                      ) : (
+                        <span className="status-complete">
+                          Review shared already
+                        </span>
+                      )}
+                    </div>
                   )}
                   {post.status === "Expired" && (
                     <span className="status-expired">Expired ⏰</span>
@@ -367,7 +417,7 @@ function App() {
                         onChange={handleFormChange}
                       >
                         <option value="Donate">Donate</option>
-                        <option value="Request">Request</option>
+                        {/* <option value="Request">Request</option> */}
                       </select>
                     </div>
                     <div className="form-group">
@@ -391,16 +441,6 @@ function App() {
                       value={formData.description}
                       onChange={handleFormChange}
                       required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="image">Upload Image</label>
-                    <input
-                      id="image"
-                      name="image"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
                     />
                   </div>
 
@@ -430,6 +470,7 @@ function App() {
                   </div>
 
                   <div className="modal-footer">
+                    <button type="submit">Post Now</button>
                     <button
                       type="button"
                       className="cancel-button"
@@ -437,7 +478,6 @@ function App() {
                     >
                       Cancel
                     </button>
-                    <button type="submit">Post Now</button>
                   </div>
                 </form>
               </div>
@@ -476,12 +516,22 @@ function App() {
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
         />
-         {showModalNoti && (
-        <NotificationModal
-          notifications={notifications}
-          onClose={() => setShowModal(false)}
-        />
-      )}
+        {showModalNoti && (
+          <NotificationModal
+            notifications={notifications}
+            onClose={() => setShowModalNoti(false)}
+          />
+        )}
+
+        {showModalRate && (
+          <RateModal
+            isOpen={showModalRate}
+            onClose={() => setShowModalRate(false)}
+            postId={ratingData.postId}
+            raterId={ratingData.raterId}
+            rateeId={ratingData.rateeId}
+          />
+        )}
       </main>
     </div>
   );
@@ -573,8 +623,6 @@ const ClaimsModal = ({ postId, isOpen, onClose }) => {
   );
 };
 
-
-
 const NotificationModal = ({ notifications, onClose }) => {
   return (
     <div className="noti-backdrop" onClick={onClose}>
@@ -591,11 +639,93 @@ const NotificationModal = ({ notifications, onClose }) => {
             ))
           )}
         </ul>
-        <button className="noti-close" onClick={onClose}>Close</button>
+        <button className="noti-close" onClick={onClose}>
+          Close
+        </button>
       </div>
     </div>
   );
 };
 
+const RateModal = ({ isOpen, onClose, raterId, rateeId, postId }) => {
+  const [rating, setRating] = useState("");
+  const [comment, setComment] = useState("");
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const payload = {
+      rater: raterId,
+      ratee: rateeId,
+      post: postId,
+      rating,
+      comment,
+    };
 
+    try {
+      const res = await axios.post(
+        `${process.env.REACT_APP_API_URL}/ratings`,
+        payload,
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      const data = await res.json();
+      if (res.ok) {
+        alert("Rating submitted!");
+        onClose();
+      } else {
+        // alert(data.message || "Rating failed.");
+        onClose();
+      }
+    } catch (error) {
+      console.error("Error submitting rating:", error);
+      alert("Server error.");
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-container">
+        <h2>Rate This User</h2>
+        <form onSubmit={handleSubmit}>
+          <label>
+            Rating (1-5):
+            <select
+              value={rating}
+              onChange={(e) => setRating(e.target.value)}
+              required
+            >
+              <option value="">Select</option>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Comment:
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              rows={4}
+            />
+          </label>
+
+          <div className="modal-actions">
+            <button type="button" className="cancel-btn" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="submit-btn">
+              Submit
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
