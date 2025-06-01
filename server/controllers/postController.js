@@ -4,6 +4,7 @@ import { sendNotification } from "../Utility/sendNotification.js";
 import User from "../modal/User.js";
 import Rating from "../modal/Rating.js";
 
+
 export const createPost = async (req, res) => {
   try {
     const {
@@ -68,21 +69,28 @@ export const getAllPosts = async (req, res) => {
 
     const postIds = posts.map((post) => post._id);
 
-    const claims = await Claim.find({
+    // Fetch all claims
+    const allClaims = await Claim.find({
       post: { $in: postIds },
-      claimStatus: "Approved",
     })
       .populate("claimer", "name email")
       .lean();
 
+    // Filter only approved claims
+    const approvedClaims = allClaims.filter(
+      (claim) => claim.claimStatus === "Approved"
+    );
+
+    // Fetch ratings
     const ratings = await Rating.find({
       post: { $in: postIds },
     })
       .populate("rater", "name email")
       .lean();
 
-    const postsWithApprovedClaim = posts.map((post) => {
-      const approvedClaim = claims.find(
+    // Map posts with associated claims, ratings, and claim IDs
+    const postsWithDetails = posts.map((post) => {
+      const approvedClaim = approvedClaims.find(
         (claim) => claim.post.toString() === post._id.toString()
       );
 
@@ -90,16 +98,21 @@ export const getAllPosts = async (req, res) => {
         (rating) => rating.post.toString() === post._id.toString()
       );
 
+      const postClaimIds = allClaims
+        .filter((claim) => claim.post.toString() === post._id.toString())
+        .map((claim) => claim._id); // Just IDs — or return full claims if needed
+
       return {
         ...post,
         approvedClaim: approvedClaim || null,
         ratings: postRatings || [],
+        claimIds: postClaimIds || [],
       };
     });
 
-    res.status(200).json(postsWithApprovedClaim);
+    res.status(200).json(postsWithDetails);
   } catch (error) {
-    console.error("Error fetching posts with approved claims:", error);
+    console.error("Error fetching posts with claims and ratings:", error);
     res.status(500).json({ message: "Failed to fetch posts." });
   }
 };
@@ -194,4 +207,3 @@ export const getUserPostsWithDetails = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch user posts." });
   }
 };
-

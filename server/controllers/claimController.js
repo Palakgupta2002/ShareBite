@@ -71,6 +71,8 @@ export const approveClaim = async (req, res) => {
       return res.status(404).json({ message: "Claim not found." });
     }
 
+    const post = await Post.findById(approvedClaim.post); // ✅ Fix here
+
     // Reject other claims for this post
     await Claim.updateMany(
       { post: approvedClaim.post, _id: { $ne: claimId } },
@@ -79,7 +81,8 @@ export const approveClaim = async (req, res) => {
 
     // Update the post's status to Claimed
     await Post.findByIdAndUpdate(approvedClaim.post, { status: "Claimed" });
-        // ✅ Notify approved claimer
+
+    // ✅ Notify approved claimer
     await sendNotification({
       recipient: approvedClaim.claimer._id,
       message: `Your claim for "${post.description.slice(0, 40)}..." has been approved!`,
@@ -91,10 +94,6 @@ export const approveClaim = async (req, res) => {
       post: approvedClaim.post,
       _id: { $ne: claimId }
     });
-    await Claim.updateMany(
-      { post: approvedClaim.post, _id: { $ne: claimId } },
-      { claimStatus: "Rejected" }
-    );
 
     for (const claim of rejectedClaims) {
       await sendNotification({
@@ -110,6 +109,7 @@ export const approveClaim = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 // PATCH /api/posts/:postId/pickup
 export const markPickedUp = async (req, res) => {
